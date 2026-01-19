@@ -1,0 +1,20 @@
+{
+    "mcpServers": {
+        "laravel-boost": {
+            "command": "/Users/user/Library/Application Support/Herd/bin/php83",
+            "args": [
+                "/Users/user/Desktop/Code/wisper-clone/artisan",
+                "boost:mcp"
+            ]
+        },
+        "herd": {
+            "command": "/Users/user/Library/Application Support/Herd/bin/php83",
+            "args": [
+                "/Applications/Herd.app/Contents/Resources/herd-mcp.phar"
+            ],
+            "env": {
+                "SITE_PATH": "/Users/user/Desktop/Code/wisper-clone"
+            }
+        }
+    }
+}
