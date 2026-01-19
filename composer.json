@@ -10,6 +10,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "codewithkyrian/whisper.php": "*",
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1",
         "nativephp/desktop": "^2.1"
@@ -90,7 +91,8 @@
         "sort-packages": true,
         "allow-plugins": {
             "pestphp/pest-plugin": true,
-            "php-http/discovery": true
+            "php-http/discovery": true,
+            "codewithkyrian/platform-package-installer": true
         }
     },
     "minimum-stability": "stable",

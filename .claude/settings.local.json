@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__laravel-boost__application-info",
+      "mcp__laravel-boost__search-docs",
+      "mcp__laravel-boost__list-routes",
+      "Bash(composer require:*)",
+      "Bash(composer config:*)",
+      "Bash(php artisan make:event:*)",
+      "Bash(php artisan:*)",
+      "Bash(npm run build:*)",
+      "mcp__laravel-boost__get-absolute-url",
+      "mcp__laravel-boost__browser-logs",
+      "Bash(vendor/bin/pint:*)",
+      "mcp__laravel-boost__last-error",
+      "mcp__laravel-boost__read-log-entries"
+    ]
+  }
+}

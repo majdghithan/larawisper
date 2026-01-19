@@ -1,59 +1,268 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Larawisper
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A cross-platform voice-to-text desktop application built with [Laravel](https://laravel.com), [NativePHP](https://nativephp.com), and [whisper.cpp](https://github.com/ggerganov/whisper.cpp). Record your voice, transcribe it locally using OpenAI's Whisper model, and automatically type the text wherever your cursor is.
 
-## About Laravel
+## Features
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- **Menu bar application** - Runs quietly in your system tray/menu bar
+- **Global keyboard shortcut** - Toggle recording from anywhere (configurable, default: `Alt+W`)
+- **Floating recorder window** - Shows audio visualization while recording
+- **Local transcription** - Uses whisper.cpp for 100% offline, private transcription
+- **Auto-type** - Transcribed text is automatically typed at your cursor position
+- **Settings panel** - Toggle notifications, auto-paste, and floating window
+- **GPU acceleration** - Utilizes Metal on macOS for fast transcription
+- **Cross-platform** - Works on macOS, Linux, and Windows
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Requirements
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- PHP 8.2+
+- Node.js 18+
+- Composer
+- FFmpeg (for audio conversion)
+- whisper.cpp (for transcription)
 
-## Learning Laravel
+## Installation
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+### 1. Clone the Repository
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+```bash
+git clone https://github.com/yourusername/larawisper.git
+cd larawisper
+```
 
-## Laravel Sponsors
+### 2. Install PHP Dependencies
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+```bash
+composer install
+```
 
-### Premium Partners
+### 3. Install Node Dependencies
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+```bash
+npm install
+```
 
-## Contributing
+### 4. Install System Dependencies
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Choose your operating system:
 
-## Code of Conduct
+#### macOS (Homebrew)
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```bash
+# Install FFmpeg and whisper.cpp
+brew install ffmpeg whisper-cpp
 
-## Security Vulnerabilities
+# Verify installation
+ffmpeg -version
+whisper-cli --help
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+#### Linux (Ubuntu/Debian)
+
+```bash
+# Install FFmpeg
+sudo apt update
+sudo apt install ffmpeg
+
+# Install whisper.cpp from source
+git clone https://github.com/ggerganov/whisper.cpp.git
+cd whisper.cpp
+make
+sudo cp main /usr/local/bin/whisper-cli
+cd ..
+
+# For auto-paste functionality, install xdotool (X11) or wtype (Wayland)
+sudo apt install xdotool  # For X11
+# OR
+sudo apt install wtype    # For Wayland
+```
+
+#### Windows
+
+1. **Install FFmpeg:**
+   - Download from [ffmpeg.org](https://ffmpeg.org/download.html)
+   - Extract to `C:\ffmpeg`
+   - Add `C:\ffmpeg\bin` to your PATH environment variable
+
+2. **Install whisper.cpp:**
+   - Download pre-built binaries from [whisper.cpp releases](https://github.com/ggerganov/whisper.cpp/releases)
+   - Extract to `C:\whisper-cpp`
+   - Add to PATH or set `WISPER_WHISPER_PATH` in `.env`
+
+3. **Verify installation:**
+   ```powershell
+   ffmpeg -version
+   whisper-cli --help
+   ```
+
+### 5. Download Whisper Model
+
+Download a Whisper model file to `storage/app/models/`:
+
+```bash
+# Create models directory
+mkdir -p storage/app/models
+
+# Download base.en model (recommended, ~150MB)
+curl -L -o storage/app/models/ggml-base.en.bin \
+  "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin"
+```
+
+**Available models:**
+
+| Model | Size | Description |
+|-------|------|-------------|
+| `tiny.en` | ~75MB | Fastest, lower accuracy |
+| `base.en` | ~150MB | Recommended balance |
+| `small.en` | ~500MB | Better accuracy |
+| `medium.en` | ~1.5GB | High accuracy |
+| `large` | ~3GB | Best accuracy, slowest |
+
+### 6. Configure Environment
+
+```bash
+cp .env.example .env
+php artisan key:generate
+```
+
+Edit `.env` if needed:
+
+```env
+# Optional: Custom binary paths (if not in PATH)
+WISPER_FFMPEG_PATH=/path/to/ffmpeg
+WISPER_WHISPER_PATH=/path/to/whisper-cli
+
+# Optional: Change the model
+WISPER_MODEL=base.en
+
+# Optional: Change the keyboard shortcut
+WISPER_SHORTCUT=Ctrl+Shift+Space
+
+# Optional: Disable auto-paste
+WISPER_AUTO_PASTE=true
+```
+
+### 7. Build Frontend Assets
+
+```bash
+npm run build
+```
+
+### 8. Run the Application
+
+```bash
+php artisan native:serve
+```
+
+## Usage
+
+1. **Start the app** - Look for the Wisper icon in your menu bar/system tray
+2. **Click the icon** or press `Ctrl+Shift+Space` to start recording
+3. **Speak** your message
+4. **Click again** or press the shortcut to stop recording
+5. **Wait** for transcription (usually 2-5 seconds)
+6. **Text is automatically pasted** at your cursor position
+
+## Configuration
+
+All configuration options are in `config/wisper.php`:
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `model` | `base.en` | Whisper model to use |
+| `shortcut` | `Ctrl+Shift+Space` | Global keyboard shortcut |
+| `language` | `en` | Transcription language |
+| `auto_paste` | `true` | Auto-paste after transcription |
+| `max_recording_seconds` | `60` | Maximum recording duration |
+| `ffmpeg_path` | `ffmpeg` | Path to FFmpeg binary |
+| `whisper_path` | `whisper-cli` | Path to whisper-cli binary |
+
+## System Permissions
+
+### macOS
+
+- **Microphone**: Automatically prompted on first use
+- **Accessibility**: Required for auto-paste. Go to:
+  `System Settings > Privacy & Security > Accessibility` and enable the app
+
+### Linux
+
+- Ensure your user has access to the microphone
+- For auto-paste: `xdotool` (X11) or `wtype` (Wayland) must be installed
+
+### Windows
+
+- Microphone permission will be requested on first use
+- Run as administrator if auto-paste doesn't work
+
+## Troubleshooting
+
+### "Audio conversion failed"
+
+- Ensure FFmpeg is installed and accessible
+- Check the path: `which ffmpeg` (macOS/Linux) or `where ffmpeg` (Windows)
+- Set explicit path in `.env`: `WISPER_FFMPEG_PATH=/full/path/to/ffmpeg`
+
+### "Transcription failed"
+
+- Ensure whisper-cli is installed and accessible
+- Verify the model file exists in `storage/app/models/`
+- Check logs: `cat storage/logs/laravel.log | tail -50`
+
+### Shortcut not working
+
+- Try a different shortcut in `.env`: `WISPER_SHORTCUT=Alt+Space`
+- On macOS, some shortcuts may conflict with system functions
+
+### Auto-paste not working
+
+- **macOS**: Grant Accessibility permission in System Settings
+- **Linux**: Install `xdotool` or `wtype`
+- **Windows**: Try running as administrator
+
+## Development
+
+```bash
+# Run in development mode with hot reload
+npm run dev
+
+# In another terminal
+php artisan native:serve
+
+# Run tests
+php artisan test
+
+# Format code
+vendor/bin/pint
+```
+
+## Building for Distribution
+
+```bash
+# Build for current platform
+php artisan native:build
+
+# Build for specific platform
+php artisan native:build --os=mac
+php artisan native:build --os=linux
+php artisan native:build --os=win
+```
+
+## Tech Stack
+
+- **Backend**: Laravel 12, PHP 8.3
+- **Desktop**: NativePHP Desktop v2 (Electron)
+- **Transcription**: whisper.cpp (local, offline)
+- **Audio**: Web MediaRecorder API
+- **Styling**: Tailwind CSS v4
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+MIT License - see [LICENSE](LICENSE) for details.
+
+## Credits
+
+- [OpenAI Whisper](https://github.com/openai/whisper) - Speech recognition model
+- [whisper.cpp](https://github.com/ggerganov/whisper.cpp) - C++ port of Whisper
+- [NativePHP](https://nativephp.com) - Desktop app framework for Laravel
+- [FFmpeg](https://ffmpeg.org) - Audio processing
