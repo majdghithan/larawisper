@@ -7,6 +7,7 @@ use Native\Desktop\Contracts\ProvidesPhpIni;
 use Native\Desktop\Facades\GlobalShortcut;
 use Native\Desktop\Facades\Menu;
 use Native\Desktop\Facades\MenuBar;
+use Native\Desktop\Facades\Window;
 
 class NativeAppServiceProvider implements ProvidesPhpIni
 {
@@ -16,22 +17,42 @@ class NativeAppServiceProvider implements ProvidesPhpIni
      */
     public function boot(): void
     {
-        // Window::open();
-        
         MenuBar::create()
-            ->tooltip('Wisper - Voice to Text')
+            ->tooltip('Larawisper - Voice to Text')
             ->width(320)
-            ->height(280)
+            ->height(500)
             ->route('recording')
             ->withContextMenu(
                 Menu::make(
-                    Menu::label('Wisper - Voice to Text'),
+                    Menu::label('Larawisper - Voice to Text'),
                     Menu::separator(),
                     Menu::link('https://github.com', 'About'),
                     Menu::separator(),
                     Menu::quit()
                 )
             );
+
+        // Create floating recorder window (center bottom of screen)
+        // Window ID 'floating-recorder' ensures only one instance exists
+        if (config('wisper.floating_window', true)) {
+            Window::open('floating-recorder')
+                ->route('floating-recorder')
+                ->height(60)
+                ->position(
+                    x: (int) ((1920 + 330) / 2),
+                    y: (int) (1080) 
+                )
+                ->alwaysOnTop()
+                ->frameless()
+                ->transparent()
+                ->resizable(false)
+                ->showDevTools(false)
+                ->focusable(false)
+                ->titleBarHidden()
+                ->closable(false)
+                ->minimizable(false)
+                ->maximizable(false);
+        }
 
         GlobalShortcut::key(config('wisper.shortcut', 'Ctrl+Shift+Space'))
             ->event(RecordingToggled::class)

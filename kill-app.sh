@@ -1,27 +1,44 @@
 #!/bin/bash
 # Kill all Larawisper/wisper-clone related processes
 
-echo "Killing Electron processes..."
-pkill -9 -f "wisper-clone.*Electron" 2>/dev/null
+echo "Stopping NativePHP processes..."
 
-echo "Killing esbuild processes..."
-pkill -9 -f "wisper-clone.*esbuild" 2>/dev/null
+# Get PIDs for all related processes
+PIDS=$(ps aux | grep -E "wisper-clone.*(Electron|php|node|esbuild)" | grep -v grep | awk '{print $2}')
 
-echo "Killing electron-vite processes..."
-pkill -9 -f "wisper-clone.*electron-vite" 2>/dev/null
+if [ -z "$PIDS" ]; then
+    echo "No processes found."
+else
+    echo "Found processes: $PIDS"
 
-echo "Killing php artisan native:serve..."
-pkill -9 -f "php artisan native:serve" 2>/dev/null
-
-# Wait a moment for processes to terminate
-sleep 1
-
-# Check if any are still running
-remaining=$(ps aux | grep -E "wisper-clone.*(Electron|esbuild|electron-vite)" | grep -v grep | wc -l)
-if [ "$remaining" -gt 0 ]; then
-    echo "Warning: $remaining processes still running. Trying harder..."
-    pkill -9 -f "wisper-clone" 2>/dev/null
+    # First try graceful kill
+    echo "$PIDS" | xargs kill 2>/dev/null
     sleep 1
+
+    # Force kill any remaining
+    REMAINING=$(ps aux | grep -E "wisper-clone.*(Electron|php|node|esbuild)" | grep -v grep | awk '{print $2}')
+    if [ -n "$REMAINING" ]; then
+        echo "Force killing remaining: $REMAINING"
+        echo "$REMAINING" | xargs kill -9 2>/dev/null
+        sleep 1
+    fi
 fi
 
-echo "Done! You can now run: php artisan native:serve"
+# Check for any remaining (excluding zombie processes marked with Z or UE state)
+ACTIVE=$(ps aux | grep -E "wisper-clone.*(Electron|php|node|esbuild)" | grep -v grep | grep -v " Z " | grep -v " UE " | wc -l)
+if [ "$ACTIVE" -gt 0 ]; then
+    echo "Warning: $ACTIVE active processes still running"
+    ps aux | grep -E "wisper-clone.*(Electron|php|node|esbuild)" | grep -v grep | grep -v " Z " | grep -v " UE "
+else
+    echo "All processes stopped successfully!"
+fi
+
+# Note about zombie processes
+ZOMBIES=$(ps aux | grep -E "wisper-clone.*Electron" | grep -E " (Z|UE) " | wc -l)
+if [ "$ZOMBIES" -gt 0 ]; then
+    echo ""
+    echo "Note: $ZOMBIES zombie process(es) exist but won't interfere. They'll clear on reboot."
+fi
+
+echo ""
+echo "You can now run: php artisan native:serve"

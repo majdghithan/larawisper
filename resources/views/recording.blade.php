@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Wisper</title>
+    <title>Larawisper</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
         body {
@@ -45,7 +45,7 @@
                         <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
                     </svg>
                 </div>
-                <span class="font-semibold text-sm">Wisper</span>
+                <span class="font-semibold text-sm">Larawisper</span>
             </div>
             <div class="text-xs text-gray-400 bg-gray-800 px-2 py-1 rounded">
                 <kbd class="font-mono">{{ config('wisper.shortcut') }}</kbd>
@@ -140,14 +140,66 @@
             </div>
         </div>
 
-        <!-- Footer -->
-        <div class="text-center text-xs text-gray-500 mt-4">
-            <p>Model: {{ config('wisper.model') }}</p>
-            <button id="open-accessibility-btn" class="clickable mt-2 text-purple-400 hover:text-purple-300 underline">
-                Setup Auto-Paste
+        <!-- Footer with Settings -->
+        <div class="text-center text-xs text-gray-500 mt-4 space-y-2">
+            <p>Model: {{ config('wisper.model') }} | <span class="shortcut-display">{{ config('wisper.shortcut') }}</span></p>
+
+            <!-- Settings Toggle -->
+            <button id="toggle-settings-btn" class="clickable text-purple-400 hover:text-purple-300 underline">
+                Settings
             </button>
+
+            <!-- Settings Panel (hidden by default) -->
+            <div id="settings-panel" class="hidden mt-3 text-left bg-gray-800 rounded-lg p-3 space-y-2">
+                <label class="flex items-center justify-between cursor-pointer">
+                    <span class="text-gray-300 text-xs">Notifications</span>
+                    <input type="checkbox" id="setting-notifications" class="toggle-checkbox" checked>
+                </label>
+                <label class="flex items-center justify-between cursor-pointer">
+                    <span class="text-gray-300 text-xs">Auto-paste text</span>
+                    <input type="checkbox" id="setting-auto-paste" class="toggle-checkbox" checked>
+                </label>
+                <label class="flex items-center justify-between cursor-pointer">
+                    <span class="text-gray-300 text-xs">Floating window</span>
+                    <input type="checkbox" id="setting-floating-window" class="toggle-checkbox" checked>
+                </label>
+                <hr class="border-gray-700 my-2">
+                <button id="open-accessibility-btn" class="clickable w-full text-left text-purple-400 hover:text-purple-300 text-xs">
+                    Setup Accessibility Permission →
+                </button>
+            </div>
         </div>
     </div>
+
+    <style>
+        .toggle-checkbox {
+            appearance: none;
+            width: 36px;
+            height: 20px;
+            background: #4b5563;
+            border-radius: 10px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .toggle-checkbox:checked {
+            background: #8b5cf6;
+        }
+        .toggle-checkbox::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.2s;
+        }
+        .toggle-checkbox:checked::after {
+            transform: translateX(16px);
+        }
+    </style>
 
     <script>
         const CONFIG = {
@@ -195,8 +247,59 @@
             document.getElementById('request-permission-btn').onclick = startRecording;
             document.getElementById('open-accessibility-btn').onclick = openAccessibilitySettings;
             document.getElementById('copy-error-btn').onclick = copyError;
+            document.getElementById('toggle-settings-btn').onclick = toggleSettings;
+
+            // Initialize settings from localStorage
+            initSettings();
 
             setState('ready');
+        }
+
+        function toggleSettings() {
+            const panel = document.getElementById('settings-panel');
+            panel.classList.toggle('hidden');
+        }
+
+        function initSettings() {
+            // Load settings from localStorage
+            const settings = {
+                notifications: localStorage.getItem('wisper_notifications') !== 'false',
+                autoPaste: localStorage.getItem('wisper_auto_paste') !== 'false',
+                floatingWindow: localStorage.getItem('wisper_floating_window') !== 'false'
+            };
+
+            document.getElementById('setting-notifications').checked = settings.notifications;
+            document.getElementById('setting-auto-paste').checked = settings.autoPaste;
+            document.getElementById('setting-floating-window').checked = settings.floatingWindow;
+
+            // Save settings on change
+            document.getElementById('setting-notifications').onchange = function(e) {
+                localStorage.setItem('wisper_notifications', e.target.checked);
+                updateServerSettings();
+            };
+            document.getElementById('setting-auto-paste').onchange = function(e) {
+                localStorage.setItem('wisper_auto_paste', e.target.checked);
+                updateServerSettings();
+            };
+            document.getElementById('setting-floating-window').onchange = function(e) {
+                localStorage.setItem('wisper_floating_window', e.target.checked);
+                updateServerSettings();
+            };
+        }
+
+        function updateServerSettings() {
+            fetch('/api/settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                },
+                body: JSON.stringify({
+                    notifications: document.getElementById('setting-notifications').checked,
+                    auto_paste: document.getElementById('setting-auto-paste').checked,
+                    floating_window: document.getElementById('setting-floating-window').checked
+                }),
+            }).catch(err => console.warn('Failed to save settings:', err));
         }
 
         let lastErrorMessage = '';
@@ -263,14 +366,20 @@
             try {
                 const blob = await recorder.stopRecording();
                 setState('transcribing');
+                // Update floating window to processing state
+                recorder.updateMenuBarState(false, 'processing');
                 const result = await recorder.uploadAndTranscribe(blob);
                 if (result.success) {
                     setState('completed', { text: result.text });
+                    // Hide floating window
+                    recorder.updateMenuBarState(false, 'idle');
                 } else {
                     setState('error', { message: result.error || 'Transcription failed' });
+                    recorder.updateMenuBarState(false, 'idle');
                 }
             } catch (error) {
                 setState('error', { message: error.message });
+                recorder.updateMenuBarState(false, 'idle');
             }
         }
 

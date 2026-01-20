@@ -174,17 +174,19 @@ export class AudioRecorder {
     }
 
     /**
-     * Update the menu bar recording state indicator.
+     * Update the menu bar and floating window state.
      * @param {boolean} isRecording Whether currently recording
+     * @param {string} state State: 'idle', 'recording', or 'processing'
      */
-    updateMenuBarState(isRecording) {
+    updateMenuBarState(isRecording, state = null) {
+        const actualState = state || (isRecording ? 'recording' : 'idle');
         fetch('/api/recording-state', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
             },
-            body: JSON.stringify({ recording: isRecording }),
+            body: JSON.stringify({ recording: isRecording, state: actualState }),
         }).catch((err) => console.warn('Failed to update menu bar state:', err));
     }
 

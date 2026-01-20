@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\FloatingWindowState;
 use App\Services\TranscriptionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -92,23 +93,48 @@ class TranscriptionController extends Controller
     }
 
     /**
-     * Update the recording state (updates menu bar label).
+     * Update the recording state (updates menu bar label and floating window).
      */
     public function setRecordingState(Request $request): JsonResponse
     {
         $request->validate([
             'recording' => 'required|boolean',
+            'state' => 'sometimes|string', // idle, recording, processing
         ]);
 
         $isRecording = $request->boolean('recording');
+        $state = $request->input('state', $isRecording ? 'recording' : 'idle');
 
+        // Store current state in cache for polling fallback
+        cache()->put('wisper_recording_state', $state, 300); // 5 minutes TTL
+
+        // Update menu bar label
         if ($isRecording) {
             MenuBar::label('🔴');
         } else {
             MenuBar::label('');
         }
 
-        return response()->json(['success' => true]);
+        // Update floating window state via event (window handles its own visibility)
+        // Check cached setting first, fall back to config
+        $floatingWindowEnabled = cache()->get('wisper_floating_window', config('wisper.floating_window', true));
+        if ($floatingWindowEnabled) {
+            FloatingWindowState::dispatch($state);
+        }
+
+        Log::info("Recording state updated: {$state}");
+
+        return response()->json(['success' => true, 'state' => $state]);
+    }
+
+    /**
+     * Get the current recording state (for polling fallback).
+     */
+    public function getRecordingState(): JsonResponse
+    {
+        $state = cache()->get('wisper_recording_state', 'idle');
+
+        return response()->json(['state' => $state]);
     }
 
     /**
@@ -119,6 +145,31 @@ class TranscriptionController extends Controller
         if (PHP_OS_FAMILY === 'Darwin') {
             // Open Accessibility settings on macOS
             Shell::openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility');
+        }
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
+     * Update user settings (stored in session/cache for this session).
+     */
+    public function updateSettings(Request $request): JsonResponse
+    {
+        $request->validate([
+            'notifications' => 'sometimes|boolean',
+            'auto_paste' => 'sometimes|boolean',
+            'floating_window' => 'sometimes|boolean',
+        ]);
+
+        // Store settings in cache (persists for this session)
+        if ($request->has('notifications')) {
+            cache()->put('wisper_notifications', $request->boolean('notifications'));
+        }
+        if ($request->has('auto_paste')) {
+            cache()->put('wisper_auto_paste', $request->boolean('auto_paste'));
+        }
+        if ($request->has('floating_window')) {
+            cache()->put('wisper_floating_window', $request->boolean('floating_window'));
         }
 
         return response()->json(['success' => true]);

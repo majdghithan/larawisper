@@ -261,42 +261,81 @@ class TranscriptionService
     {
         Clipboard::text($text);
 
-        // Show notification that text is ready
-        $preview = strlen($text) > 50 ? substr($text, 0, 50).'...' : $text;
-        Notification::title('Text Copied!')
-            ->message($preview)
-            ->show();
+        // Check cached user settings (fallback to config)
+        $notificationsEnabled = cache()->get('wisper_notifications', config('wisper.notifications_enabled', true));
+        $autoPasteEnabled = cache()->get('wisper_auto_paste', config('wisper.auto_paste', true));
 
-        if (config('wisper.auto_paste', true)) {
-            $this->simulatePaste();
+        // Show notification that text is ready (if enabled)
+        if ($notificationsEnabled) {
+            $preview = strlen($text) > 50 ? substr($text, 0, 50).'...' : $text;
+            Notification::title('Text Copied!')
+                ->message($preview)
+                ->show();
+        }
+
+        if ($autoPasteEnabled) {
+            $this->typeText($text);
         }
     }
 
     /**
-     * Simulate paste keystroke based on the operating system.
+     * Type text directly using OS-specific methods.
+     * This is more reliable than simulating Cmd+V paste.
      */
-    private function simulatePaste(): void
+    private function typeText(string $text): void
     {
         if (PHP_OS_FAMILY === 'Darwin') {
-            // macOS: Use AppleScript with delay to ensure focus returns to previous app
-            // Each -e flag is a separate line of the script
+            // macOS: Use AppleScript to type text directly
+            // Escape only double quotes for AppleScript string (backslash-quote)
+            $escapedText = str_replace('\\', '\\\\', $text);
+            $escapedText = str_replace('"', '\\"', $escapedText);
+            $escapedText = str_replace(["\n", "\r"], ' ', $escapedText);
+
+            // Write AppleScript to temp file to avoid all shell escaping issues
+            $scriptContent = "delay 0.5\ntell application \"System Events\" to keystroke \"{$escapedText}\"";
+            $tempFile = '/tmp/larawisper_type_'.time().'.scpt';
+            file_put_contents($tempFile, $scriptContent);
+
+            Log::info("Typing text via AppleScript file: {$tempFile}");
+
+            // Run osascript with the file (temp files in /tmp are auto-cleaned)
             ChildProcess::start(
-                cmd: "osascript -e 'delay 0.3' -e 'tell application \"System Events\" to keystroke \"v\" using command down'",
-                alias: 'paste-'.time()
+                cmd: "/usr/bin/osascript {$tempFile}",
+                alias: 'type-'.time()
             );
         } elseif (PHP_OS_FAMILY === 'Linux') {
-            // Linux: Use xdotool (X11) or wtype (Wayland)
-            // Try xdotool first (more common)
+            // Linux: Use xdotool to type text via bash script
+            // ChildProcess doesn't support && chaining, so we write a temp script
+            $escapedText = str_replace("'", "'\\''", $text); // Escape single quotes for bash
+            $escapedText = str_replace(["\n", "\r"], ' ', $escapedText);
+
+            $scriptContent = "#!/bin/bash\nsleep 0.5\nxdotool type --clearmodifiers '{$escapedText}'";
+            $tempFile = '/tmp/larawisper_type_'.time().'.sh';
+            file_put_contents($tempFile, $scriptContent);
+            chmod($tempFile, 0755);
+
+            Log::info("Typing text via xdotool script: {$tempFile}");
+
             ChildProcess::start(
-                cmd: 'xdotool key --clearmodifiers ctrl+v 2>/dev/null || wtype -M ctrl -k v -m ctrl 2>/dev/null',
-                alias: 'paste-'.time()
+                cmd: "/bin/bash {$tempFile}",
+                alias: 'type-'.time()
             );
         } elseif (PHP_OS_FAMILY === 'Windows') {
-            // Windows: Use PowerShell to send Ctrl+V
-            $psCommand = "[System.Windows.Forms.SendKeys]::SendWait('^v')";
+            // Windows: Use PowerShell script to send keys
+            // ChildProcess doesn't support complex commands, so we write a temp script
+            $escapedText = str_replace(['{', '}', '(', ')', '+', '^', '%', '~', '[', ']'],
+                ['{{}', '{}}', '{(}', '{)}', '{+}', '{^}', '{%}', '{~}', '{[}', '{]}'], $text);
+            $escapedText = str_replace(["\n", "\r"], ' ', $escapedText);
+
+            $scriptContent = "Start-Sleep -Milliseconds 500\nAdd-Type -AssemblyName System.Windows.Forms\n[System.Windows.Forms.SendKeys]::SendWait(\"{$escapedText}\")";
+            $tempFile = sys_get_temp_dir().'\\larawisper_type_'.time().'.ps1';
+            file_put_contents($tempFile, $scriptContent);
+
+            Log::info("Typing text via PowerShell script: {$tempFile}");
+
             ChildProcess::start(
-                cmd: "powershell -Command \"Add-Type -AssemblyName System.Windows.Forms; {$psCommand}\"",
-                alias: 'paste-'.time()
+                cmd: "powershell -ExecutionPolicy Bypass -File \"{$tempFile}\"",
+                alias: 'type-'.time()
             );
         }
     }

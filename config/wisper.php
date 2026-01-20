@@ -83,6 +83,26 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Notifications
+    |--------------------------------------------------------------------------
+    |
+    | Whether to show system notifications when text is copied.
+    |
+    */
+    'notifications_enabled' => env('WISPER_NOTIFICATIONS', true),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Floating Window
+    |--------------------------------------------------------------------------
+    |
+    | Whether to show a floating window with audio visualization while recording.
+    |
+    */
+    'floating_window' => env('WISPER_FLOATING_WINDOW', true),
+
+    /*
+    |--------------------------------------------------------------------------
     | Binary Paths
     |--------------------------------------------------------------------------
     |
