@@ -97,16 +97,22 @@ sudo apt install wtype    # For Wayland
 
 ### 5. Download Whisper Model
 
-Download a Whisper model file to `storage/app/models/`:
+Download a Whisper model file to `storage/app/models/` (for development) or `extras/models/` (for production builds):
 
 ```bash
 # Create models directory
 mkdir -p storage/app/models
+mkdir -p extras/models
 
 # Download base.en model (recommended, ~150MB)
 curl -L -o storage/app/models/ggml-base.en.bin \
   "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin"
+
+# For production builds, also copy to extras (bundled with app)
+cp storage/app/models/ggml-base.en.bin extras/models/
 ```
+
+> **Note:** Model files are not included in git due to size (~150MB). You must download them after cloning.
 
 **Available models:**
 

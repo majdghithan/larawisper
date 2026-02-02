@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Storage;
 use Native\Desktop\Facades\ChildProcess;
 use Native\Desktop\Facades\Clipboard;
 use Native\Desktop\Facades\Notification;
@@ -21,8 +22,7 @@ class TranscriptionService
     public function transcribe(string $audioPath): string
     {
         $model = config('wisper.model', 'base.en');
-        $modelsPath = config('wisper.models_path');
-        $modelFile = "{$modelsPath}/ggml-{$model}.bin";
+        $modelFile = $this->getModelPath($model);
         $language = config('wisper.language', 'en');
 
         Log::info("Transcribing with whisper-cpp: {$audioPath}");
@@ -358,16 +358,14 @@ class TranscriptionService
     }
 
     /**
-     * Check if the Whisper model is downloaded.
+     * Check if the Whisper model is available (bundled or downloaded).
      */
     public function isModelDownloaded(): bool
     {
         $model = config('wisper.model', 'base.en');
-        $modelsPath = config('wisper.models_path');
+        $modelPath = $this->getModelPath($model);
 
-        $modelFile = "{$modelsPath}/ggml-{$model}.bin";
-
-        return file_exists($modelFile);
+        return $modelPath !== null && file_exists($modelPath);
     }
 
     /**
@@ -376,5 +374,32 @@ class TranscriptionService
     public function getModelName(): string
     {
         return config('wisper.model', 'base.en');
+    }
+
+    /**
+     * Get the path to the Whisper model file.
+     * Checks bundled extras first (for production), then falls back to storage (for development).
+     */
+    private function getModelPath(string $model): ?string
+    {
+        $modelFilename = "ggml-{$model}.bin";
+
+        // First, check if model is bundled in extras (production builds)
+        try {
+            if (Storage::disk('extras')->exists("models/{$modelFilename}")) {
+                return Storage::disk('extras')->path("models/{$modelFilename}");
+            }
+        } catch (\Exception $e) {
+            // extras disk may not be available in development
+            Log::debug('Extras disk not available, falling back to storage: '.$e->getMessage());
+        }
+
+        // Fallback to storage/app/models (development)
+        $storagePath = config('wisper.models_path')."/{$modelFilename}";
+        if (file_exists($storagePath)) {
+            return $storagePath;
+        }
+
+        return null;
     }
 }

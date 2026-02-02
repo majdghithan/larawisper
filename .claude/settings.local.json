@@ -13,7 +13,8 @@
       "mcp__laravel-boost__browser-logs",
       "Bash(vendor/bin/pint:*)",
       "mcp__laravel-boost__last-error",
-      "mcp__laravel-boost__read-log-entries"
+      "mcp__laravel-boost__read-log-entries",
+      "Bash(brew list:*)"
     ]
   }
 }
