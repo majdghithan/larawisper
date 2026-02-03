@@ -1,7 +1,6 @@
 # Larawisper
 <img width="333" height="538" alt="larawisper3" src="https://github.com/user-attachments/assets/67f1755f-d9a2-48ae-94fd-e78a3fdc1a7c" />
 <img width="333" height="540" alt="larawisper2" src="https://github.com/user-attachments/assets/09337f79-a08e-4334-9a56-2ead885feed6" />
-<img width="327" height="534" alt="larawisper1" src="https://github.com/user-attachments/assets/e3c664fd-e2c3-48fe-957d-eea7c52df001" />
 <img width="274" height="63" alt="larawisper5" src="https://github.com/user-attachments/assets/d2011f33-05b8-43a5-9c32-8cc7119a3453" />
 <img width="267" height="66" alt="larawisper4" src="https://github.com/user-attachments/assets/c165fbb8-3fbb-481b-89dd-d334cfccab01" />
 
